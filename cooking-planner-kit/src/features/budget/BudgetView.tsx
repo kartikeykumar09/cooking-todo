@@ -65,9 +65,7 @@ export function BudgetView({ plan }: { plan: Plan }): JSX.Element {
           aria-valuenow={budget.totalCents}
         >
           <div
-            className={`h-full ${
-              budget.isOverBudget ? 'bg-destructive' : 'bg-primary'
-            }`}
+            className={`h-full ${budget.isOverBudget ? 'bg-destructive' : 'bg-primary'}`}
             style={{ width: fillPercent }}
           />
         </div>
@@ -77,9 +75,7 @@ export function BudgetView({ plan }: { plan: Plan }): JSX.Element {
         ) : null}
 
         {budget.hasEstimates ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Includes estimated prices.
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Includes estimated prices.</p>
         ) : null}
       </div>
 
@@ -115,9 +111,7 @@ export function BudgetView({ plan }: { plan: Plan }): JSX.Element {
 
       {topLines.length > 0 ? (
         <article className="rounded-lg border border-border bg-surface p-4 shadow-sm">
-          <h3 className="font-display text-base text-foreground">
-            Top cost drivers
-          </h3>
+          <h3 className="font-display text-base text-foreground">Top cost drivers</h3>
           <ul className="mt-2 space-y-1 text-sm text-foreground">
             {topLines.map((line) => (
               <li

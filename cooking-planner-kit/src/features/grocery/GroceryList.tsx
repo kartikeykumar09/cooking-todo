@@ -67,13 +67,7 @@ export function GroceryList({ plan }: { plan: Plan }): JSX.Element {
           {CATEGORY_ORDER.filter((category) => list.byCategory[category]?.length).map(
             (category) => {
               const items = list.byCategory[category] ?? [];
-              return (
-                <CategorySection
-                  key={category}
-                  category={category}
-                  items={items}
-                />
-              );
+              return <CategorySection key={category} category={category} items={items} />;
             },
           )}
         </div>

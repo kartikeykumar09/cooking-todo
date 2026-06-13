@@ -65,10 +65,9 @@ describe('BudgetView', () => {
   });
 
   it('indicates over budget when total exceeds cap', () => {
-    const plan = makePlan(
-      300,
-      [makeMeal({ ingredients: [makeIngredient({ unitCostCents: 1000 })] })],
-    );
+    const plan = makePlan(300, [
+      makeMeal({ ingredients: [makeIngredient({ unitCostCents: 1000 })] }),
+    ]);
     const html = renderToStaticMarkup(<BudgetView plan={plan} />);
 
     expect(html.toLowerCase()).toContain('over budget');

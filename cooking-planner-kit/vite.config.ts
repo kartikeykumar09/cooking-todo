@@ -1,81 +1,150 @@
 import { defineConfig, loadEnv } from 'vite';
-import type { Plugin } from 'vite';
+import type { Connect, Plugin, ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
+
+type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+function jsonResponse(
+  res: Parameters<Connect.NextHandleFunction>[1],
+  result: ApiResult<unknown>,
+): void {
+  res.statusCode = result.ok ? 200 : 400;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(result));
+}
+
+function errorResponse(
+  res: Parameters<Connect.NextHandleFunction>[1],
+  err: unknown,
+): void {
+  res.statusCode = 500;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(
+    JSON.stringify({
+      ok: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }),
+  );
+}
+
+function readJsonBody(req: Parameters<Connect.NextHandleFunction>[0]): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        resolve(chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {});
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function mountPost(
+  server: ViteDevServer,
+  path: string,
+  modulePath: string,
+  handler: (mod: Record<string, unknown>, body: unknown) => Promise<ApiResult<unknown>>,
+): void {
+  server.middlewares.use(path, (req, res, next) => {
+    if (req.method !== 'POST') {
+      next();
+      return;
+    }
+    void (async () => {
+      try {
+        const body = await readJsonBody(req);
+        const mod = (await server.ssrLoadModule(modulePath)) as Record<string, unknown>;
+        const result = await handler(mod, body);
+        jsonResponse(res, result);
+      } catch (err) {
+        errorResponse(res, err);
+      }
+    })();
+  });
+}
+
+function mountGet(
+  server: ViteDevServer,
+  path: string,
+  modulePath: string,
+  handler: (mod: Record<string, unknown>, url: URL) => Promise<ApiResult<unknown>>,
+): void {
+  server.middlewares.use(path, (req, res, next) => {
+    if (req.method !== 'GET') {
+      next();
+      return;
+    }
+    void (async () => {
+      try {
+        const url = new URL(req.url ?? '/', 'http://localhost');
+        const mod = (await server.ssrLoadModule(modulePath)) as Record<string, unknown>;
+        const result = await handler(mod, url);
+        jsonResponse(res, result);
+      } catch (err) {
+        errorResponse(res, err);
+      }
+    })();
+  });
+}
 
 function devApiPlugin(): Plugin {
   return {
     name: 'cooking-planner-dev-api',
     configureServer(server) {
-      server.middlewares.use('/api/generate-plan', (req, res, next) => {
-        if (req.method !== 'POST') {
-          next();
-          return;
-        }
+      mountPost(
+        server,
+        '/api/generate-plan',
+        '/src/api/generate-plan.ts',
+        async (mod, body) => {
+          const generatePlan = mod.generatePlan as (
+            input: unknown,
+          ) => Promise<ApiResult<unknown>>;
+          return generatePlan(body);
+        },
+      );
 
-        const chunks: Buffer[] = [];
-        req.on('data', (chunk: Buffer) => chunks.push(chunk));
-        req.on('end', () => {
-          void (async () => {
-            try {
-              const body: unknown = chunks.length
-                ? JSON.parse(Buffer.concat(chunks).toString('utf8'))
-                : {};
-              const mod = (await server.ssrLoadModule(
-                '/src/api/generate-plan.ts',
-              )) as typeof import('./src/api/generate-plan');
-              const result = await mod.generatePlan(body);
-              res.statusCode = result.ok ? 200 : 400;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(result));
-            } catch (err) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(
-                JSON.stringify({
-                  ok: false,
-                  error: err instanceof Error ? err.message : 'Unknown error',
-                }),
-              );
-            }
-          })();
-        });
+      mountPost(
+        server,
+        '/api/suggest-substitutions',
+        '/src/api/suggest-substitutions.ts',
+        async (mod, body) => {
+          const suggestSubstitutions = mod.suggestSubstitutions as (
+            input: unknown,
+          ) => Promise<ApiResult<unknown>>;
+          return suggestSubstitutions(body);
+        },
+      );
+
+      mountPost(server, '/api/plans/save', '/src/api/plans.ts', async (mod, body) => {
+        const handleSavePlan = mod.handleSavePlan as (
+          input: unknown,
+        ) => Promise<ApiResult<unknown>>;
+        return handleSavePlan(body);
       });
 
-      server.middlewares.use('/api/suggest-substitutions', (req, res, next) => {
-        if (req.method !== 'POST') {
-          next();
-          return;
-        }
+      mountGet(server, '/api/plans/list', '/src/api/plans.ts', async (mod) => {
+        const handleListPlans = mod.handleListPlans as () => Promise<ApiResult<unknown>>;
+        return handleListPlans();
+      });
 
-        const chunks: Buffer[] = [];
-        req.on('data', (chunk: Buffer) => chunks.push(chunk));
-        req.on('end', () => {
-          void (async () => {
-            try {
-              const body: unknown = chunks.length
-                ? JSON.parse(Buffer.concat(chunks).toString('utf8'))
-                : {};
-              const mod = (await server.ssrLoadModule(
-                '/src/api/suggest-substitutions.ts',
-              )) as typeof import('./src/api/suggest-substitutions');
-              const result = await mod.suggestSubstitutions(body);
-              res.statusCode = result.ok ? 200 : 400;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(result));
-            } catch (err) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(
-                JSON.stringify({
-                  ok: false,
-                  error: err instanceof Error ? err.message : 'Unknown error',
-                }),
-              );
-            }
-          })();
-        });
+      mountGet(server, '/api/plans/get', '/src/api/plans.ts', async (mod, url) => {
+        const handleGetPlan = mod.handleGetPlan as (
+          id: unknown,
+        ) => Promise<ApiResult<unknown>>;
+        return handleGetPlan(url.searchParams.get('id'));
+      });
+
+      mountPost(server, '/api/plans/delete', '/src/api/plans.ts', async (mod, body) => {
+        const handleDeletePlan = mod.handleDeletePlan as (
+          id: unknown,
+        ) => Promise<ApiResult<unknown>>;
+        const id = (body as { id?: unknown } | null)?.id;
+        return handleDeletePlan(id);
       });
     },
   };
@@ -86,6 +155,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   if (env.GEMINI_API_KEY) process.env.GEMINI_API_KEY = env.GEMINI_API_KEY;
   if (env.ANTHROPIC_API_KEY) process.env.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
+  if (env.SUPABASE_URL) process.env.SUPABASE_URL = env.SUPABASE_URL;
+  if (env.SUPABASE_ANON_KEY) process.env.SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
+  if (env.SUPABASE_SERVICE_ROLE_KEY)
+    process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 
   return {
     plugins: [react(), tailwindcss(), devApiPlugin()],

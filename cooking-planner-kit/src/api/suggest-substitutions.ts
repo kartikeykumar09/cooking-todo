@@ -45,13 +45,10 @@ const inputPlanShapeSchema = z.object({
 
 function buildPrompt(plan: Plan): string {
   const restrictions =
-    [...plan.preferences.dietaryRestrictions, ...plan.preferences.allergies].join(
-      ', ',
-    ) || 'none';
+    [...plan.preferences.dietaryRestrictions, ...plan.preferences.allergies].join(', ') ||
+    'none';
   const ingredientLines = plan.meals
-    .flatMap((m) =>
-      m.ingredients.map((ing) => `- ${ing.name} (used in ${m.title})`),
-    )
+    .flatMap((m) => m.ingredients.map((ing) => `- ${ing.name} (used in ${m.title})`))
     .join('\n');
 
   return [

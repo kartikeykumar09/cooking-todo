@@ -60,12 +60,7 @@ function ArrowIcon(): JSX.Element {
 
 function SparkleIcon(): JSX.Element {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-4 w-4"
-    >
+    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4">
       <path
         d="M10 3v3m0 8v3m7-7h-3M6 10H3m11.5-4.5-2 2m-5 5-2 2m9 0-2-2m-5-5-2-2"
         stroke="currentColor"
@@ -94,8 +89,8 @@ export function SubstitutionsPanel({ plan }: { plan: Plan }): JSX.Element {
       <header className="space-y-1">
         <h2 className="font-display text-2xl text-foreground">Substitutions</h2>
         <p className="text-sm text-muted-foreground">
-          Swap ingredients to save money, dodge an allergen, or use what your
-          store actually stocks.
+          Swap ingredients to save money, dodge an allergen, or use what your store
+          actually stocks.
         </p>
       </header>
 
@@ -179,9 +174,7 @@ function SubstitutionCard({
       <div className="mt-2 flex items-center justify-between gap-3">
         <span className={`text-sm font-medium ${costClass}`}>{costLabel}</span>
       </div>
-      {note ? (
-        <p className="mt-2 text-sm text-muted-foreground">{note}</p>
-      ) : null}
+      {note ? <p className="mt-2 text-sm text-muted-foreground">{note}</p> : null}
     </li>
   );
 }
