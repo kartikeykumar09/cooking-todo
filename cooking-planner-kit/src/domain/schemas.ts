@@ -134,3 +134,15 @@ export const mealPlanToolInputSchema = {
   },
   required: ['meals'],
 } as const;
+
+export const generatedSubstitutionSchema = z.object({
+  ingredientName: z.string().min(1),
+  replacementName: z.string().min(1),
+  reason: z.enum(['allergy', 'cost', 'availability', 'preference']),
+  estimatedCostDeltaCents: z.number().int(), // negative = saves money
+  note: z.string().nullable(),
+});
+export const generatedSubstitutionsSchema = z.object({
+  substitutions: z.array(generatedSubstitutionSchema),
+});
+export type GeneratedSubstitutions = z.infer<typeof generatedSubstitutionsSchema>;
